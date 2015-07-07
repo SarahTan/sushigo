@@ -1,0 +1,109 @@
+<head>
+  <meta charset="UTF-8">
+  <title>Sushi Go!</title>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Sushi Go! <button class="btn btn-default" id="instructions">Instructions</button></h1>
+    <div class="main-content">
+      {{#if gameInProgress}}
+        {{> game}}
+      {{else}}
+        {{> landing}}
+      {{/if}}
+    </div>
+  </div>
+</body>
+
+
+<template name="landing">
+  <h3>Start a new game</h3>
+  <div class="row">
+    <div class="col-sm-4">
+      <form>
+        <div class="form-group">
+          <label for="player-name">Your name</label>
+          <input type="text" class="form-control" id="player-name" placeholder="Your name here" value="Sarah">
+        </div>
+        <div class="form-group">
+          <label for="get-num-players">Number of players</label>
+          <select class="form-control" id="get-num-players">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5" selected>5</option>
+          </select>
+        </div>
+        <button class="btn btn-primary pull-right" id="start-game">Play!</button>        
+      </form>
+    </div>
+  </div>  
+</template>
+
+<template name="game">
+  <h2>Round {{round}} {{inProgress}}<button class="btn btn-default" id="end-game">End game</button></h2>
+  <div class="row" id="bots">
+    {{#each $ players}}
+      {{#unless $first}}
+        {{> bot}}
+      {{/unless}}
+    {{/each}}
+  </div>
+  <div class="col-sm-9">
+    <h2>My cards</h2>
+    {{> self}}
+  </div>
+  <div class="col-sm-3">
+    {{> stats}}    
+  </div>
+</template>
+
+<template name="bot">
+  <div class="col-sm-{{size}}">
+    <h4>Player's {{$index}} chosen cards</h4>
+    <div class="card-holder">      
+      {{#each botsChosen}}
+        {{this}}<br />
+      {{/each}}
+    </div>
+  </div>
+</template>
+
+<template name="self">
+  <div class="row" id="player">
+    <div class="col-sm-6">
+      <h4>My chosen cards</h4>
+      <div class="card-holder">
+        <div class="row">
+          <div class="col-xs-9">
+            {{#each myChosen}}
+              {{this}}<br />
+            {{/each}}
+          </div>
+          <div class="col-xs-3">
+            <button class="btn btn-primary pull-right" id="use-chopsticks" disabled="disabled">Use chopsticks</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-sm-6">
+      <h4>Select a card to keep</h4>
+      <div class="card-holder">
+        {{#each $ myHands}}
+          <a href="#" class="choice" data-choice="{{$index}}">{{this}}</a><br />
+        {{/each}}
+      </div>
+    </div>
+  </div>
+</template>
+
+<template name="stats">
+  <h2>Statistics</h2>
+  <p>Round {{round}}</p>
+  <p>Turn {{turn}}</p>
+  {{#if round1Winners}}
+    Round 1 winner: {{round1Winners}}
+  {{/if}}
+</template>
