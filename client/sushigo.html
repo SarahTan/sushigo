@@ -50,23 +50,30 @@
       {{/unless}}
     {{/each}}
   </div>
-  <div class="col-sm-9">
-    <h2>My cards</h2>
-    {{> self}}
-  </div>
-  <div class="col-sm-3">
-    {{> stats}}    
+  <div class="row">
+    <div class="col-sm-9">
+      <h2>My cards</h2>
+      {{> self}}
+    </div>
+    <div class="col-sm-3">
+      {{> stats}}    
+    </div>
   </div>
 </template>
 
 <template name="bot">
   <div class="col-sm-{{size}}">
-    <h4>Player's {{$index}} chosen cards</h4>
-    <div class="card-holder">      
-      {{#each botsChosen}}
-        {{this}}<br />
-      {{/each}}
+    <h4>{{botName}}'s chosen cards</h4>
+    <div class="card-score-holder"> 
+      <div class="card-holder">
+        {{#each botsChosen}}
+          {{this}}<br />
+        {{/each}}
+      </div>
+      <hr>
+      Score: {{score}}
     </div>
+    
   </div>
 </template>
 
@@ -74,26 +81,46 @@
   <div class="row" id="player">
     <div class="col-sm-6">
       <h4>My chosen cards</h4>
-      <div class="card-holder">
-        <div class="row">
-          <div class="col-xs-9">
-            {{#each myChosen}}
-              {{this}}<br />
-            {{/each}}
+      <div class="card-score-holder">
+        <div class="card-holder">
+          <div class="row">
+            <div class="col-xs-8">
+              {{#each myChosen}}
+                {{this}}<br />
+              {{/each}}
+            </div>
+            <div class="col-xs-4">
+              <button class="btn btn-primary pull-right" id="use-chopsticks" disabled="disabled">Use chopsticks</button>
+              {{#if usingChopsticks}}
+                <p class="text-justify"><em>Select a card to exchange with chopsticks <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span></em></p>
+              {{/if}}
+            </div>
           </div>
-          <div class="col-xs-3">
-            <button class="btn btn-primary pull-right" id="use-chopsticks" disabled="disabled">Use chopsticks</button>
-          </div>
-        </div>
+        </div>        
+        <hr>
+        Score: {{score}}
+        <span class="pull-right">Pudding: {{puddings}}</span>
       </div>
     </div>
     
     <div class="col-sm-6">
       <h4>Select a card to keep</h4>
-      <div class="card-holder">
-        {{#each $ myHands}}
-          <a href="#" class="choice" data-choice="{{$index}}">{{this}}</a><br />
-        {{/each}}
+      <div id="card-selection">
+        <div class="row">
+          <div class="col-xs-8">
+            {{#each $ myHands}}
+              <a href="#" class="choice" data-choice="{{$index}}">{{this}}</a><br />
+            {{/each}}
+          </div>
+          <div class="col-xs-4">
+            {{#if roundEnded}}
+              <button class="btn btn-primary pull-right" id="start-round">Start<br/>next {{#if gameEnded}}game{{else}}round{{/if}}</button>
+            {{else}}
+              <h3>Time left</h3>
+              <h1 class="text-center">{{timer}}s</h1>
+            {{/if}}   
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -101,9 +128,16 @@
 
 <template name="stats">
   <h2>Statistics</h2>
-  <p>Round {{round}}</p>
-  <p>Turn {{turn}}</p>
+  <p><strong>Game {{game}}</strong></p>
+  <p><strong>Round {{round}}</strong></p>
+  <p><strong>Turn {{turn}}</strong></p>
   {{#if round1Winners}}
-    Round 1 winner: {{round1Winners}}
+    <p><strong>Round 1 winner:</strong> {{round1Winners}}</p>
+  {{/if}}
+  {{#if round2Winners}}
+    <p><strong>Round 2 winner:</strong> {{round2Winners}}</p>
+  {{/if}}
+  {{#if round3Winners}}
+    <p><strong>Round 3 winner:</strong> {{round3Winners}}</p>
   {{/if}}
 </template>

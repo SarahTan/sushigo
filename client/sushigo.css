@@ -3,7 +3,17 @@
 }
 
 .card-holder {
-  height: 230px;
+  height: 200px;
+}
+
+.card-score-holder {
+  border: 1px solid grey;
+  border-radius: 10px;
+  padding: 10px 20px;
+}
+
+#card-selection {
+  height: 262px;
   border: 1px solid grey;
   border-radius: 10px;
   padding: 10px 20px;
@@ -14,6 +24,12 @@
   margin-bottom: 50px;
 }
 
-#use-chopsticks {
-  margin-top: 3px;
+#use-chopsticks, #start-round {
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+hr {
+  margin-top: 10px;
+  margin-bottom: 10px;
 }

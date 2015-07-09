@@ -3,12 +3,21 @@ var numPlayers = 5;
 var players = [];
 var playerNames = ["Sarah", "Alice", "Bob", "Charlie", "Dan"];
 var cardsPerPlayer = 0;
+var scores = new ReactiveArray([0, 0, 0, 0, 0]);
 Session.setDefault("gameInProgress", false);
 Session.setDefault("round", 1);
 Session.setDefault("turn", 1);
 Session.setDefault("round1Winners", false);
+Session.setDefault("round2Winners", false);
+Session.setDefault("round3Winners", false);
 Session.setDefault("playerName", "Sarah");
-
+Session.setDefault("timer", 7);
+Session.setDefault("usingChopsticks", false);
+Session.setDefault("puddingCount", 0);
+Session.setDefault("roundEnded", false);
+Session.setDefault("gameEnded", false);
+Session.setDefault("game", 1);
+var interval = Meteor.setInterval(timer, 1000);
 
 Template.body.helpers({
   gameInProgress: function () {
@@ -24,6 +33,8 @@ Template.body.events({
 
 Template.landing.events({
   "click #start-game": function () {
+    Session.set("round", 1);
+    
     numPlayers = $("#get-num-players").val();
     dealCards();
     Session.set("gameInProgress", true);
@@ -56,6 +67,14 @@ Template.bot.helpers({
   
   botsChosen: function () {
     return this.chosen.list();
+  },
+  
+  botName: function () {
+    return playerNames[this.$index];
+  },
+  
+  score: function () {
+    return scores.list()[this.$index];
   }
 });
 
@@ -66,23 +85,69 @@ Template.self.helpers({
   
   myHands: function () {
     return players[0].hands.list();
+  },
+  
+  score: function () {
+    return scores.list()[0];
+  },
+  
+  timer: function () {
+    return Session.get("timer");
+  },
+  
+  usingChopsticks: function () {
+    return Session.get("usingChopsticks");
+  },
+  
+  puddings: function () {
+    return Session.get("puddingCount");
+  },
+  
+  roundEnded: function () {
+    return Session.get("roundEnded");
+  },
+  
+  gameEnded: function () {
+    return Session.get("gameEnded");
   }
-})
+});
 
 Template.self.events({
   "click .choice": function (event) {
     var choice = event.target.dataset.choice;
-    chooseCard(choice);
-    if(players[0].hands.length == 0) {
-      calculateScore();
-      console.log(Session.get("round1Winners"));
-      dealCards();
+    
+    if (Session.get("usingChopsticks") == true) {
+      sushiGo(choice);
+      Session.set("usingChopsticks", false);
+    } else {
+      chooseCard(choice);
+
+      if (players[0].hands.length > 0) {
+        Session.set("timer", 7);
+      } else {
+        calculateScore();
+        Session.set("roundEnded", true);
+        if (Session.get("round") == 3) {
+          Session.set("gameEnded", true);
+        }
+      }
     }
   },
   
   "click #use-chopsticks": function () {
-    
+    Session.set("usingChopsticks", true);
     $("#use-chopsticks").attr("disabled", "disabled");  // enable use chopsticks button
+  },
+  
+  "click #start-round": function () {
+    if(Session.get("gameEnded")) {
+      Session.set("round", 1);
+    } else {
+      Session.set("round", Session.get("round")+1);
+    }
+    
+    dealCards();    
+    Session.set("roundEnded", false);
   }
 });
 
@@ -98,6 +163,19 @@ Template.stats.helpers({
   round1Winners: function () {
     var round1Winners = Session.get("round1Winners");
     return round1Winners;    
+  },
+  
+  round2Winners: function () {
+    var round2Winners = Session.get("round2Winners");
+    return round2Winners;    
+  },
+  
+  round3Winners: function () {
+    return Session.get("round3Winners");  
+  },
+  
+  game: function () {
+    return Session.get("game");
   }
 })
 
@@ -162,19 +240,27 @@ function initDeck () {
 
 // Creates the players array which contains their cards, score, maki count and pudding count
 // Called at the start of round 1 by dealCards()
-function initPlayers () {
-  players = [];
-  
-  for(var i = 0; i < numPlayers; i++) {
-    players[i] = {
-      chosen : new ReactiveArray(),   // cards which have been selected by the players
-      hands : new ReactiveArray(),    // cards which are being passed around
-      chopsticks : [],  // record indices of the chopsticks cards in chosen pile for easy removal
-      score : 0,
-      maki : 0,
-      pudding : 0
-    };
-  }
+function initPlayers () {  
+  if (players.length == 0) {
+    for(var i = 0; i < numPlayers; i++) {
+      players[i] = {
+        chosen : new ReactiveArray(),   // cards which have been selected by the players
+        hands : new ReactiveArray(),    // cards which are being passed around
+        chopsticks : [],  // record indices of the chopsticks cards in chosen pile for easy removal
+        score : 0,
+        maki : 0,
+        pudding : 0
+      };
+    }
+  } else {
+    for(var i = 0; i < numPlayers; i++) {
+      players[i].chosen.clear();
+      players[i].hands.clear();
+      players[i].chopsticks = [];
+      players[i].maki = 0;
+      players[i].pudding = 0;
+    }
+  }    
 }
 
 // Returns the number of cards each player should get
@@ -198,7 +284,7 @@ function calcCardsPerPlayer () {
 // Called at the start of round 2 / 3 by dealCards()
 function resetPlayers () {
   for(var i = 0; i < numPlayers; i++) {
-    players[i].chosen = new ReactiveArray();
+    players[i].chosen.clear();
     players[i].maki = 0;
     players[i].chopsticks = [];
   }
@@ -210,6 +296,13 @@ function dealCards () {
     initDeck();    
     initPlayers(numPlayers);
     cardsPerPlayer = calcCardsPerPlayer(numPlayers);
+    
+    Session.set("round1Winners", false);
+    Session.set("round2Winners", false);
+    Session.set("round3Winners", false);
+    Session.set("timer", 7);
+    Session.set("usingChopsticks", false);
+    Session.set("puddingCount", 0);
   } else {
     resetPlayers(numPlayers);
   }  
@@ -235,6 +328,12 @@ function dealCards () {
 // Player (rep by players[0]) chooses a card, while AI randomly selects a card
 function chooseCard(cardIndex) {
   for(var i = 0; i < numPlayers; i++) {
+    // Naive implementation: 66% chance of using chopsticks if bot has it
+    if(i != 0 && players[i].chopsticks.length > 0 && rand(0, 3)) { 
+      var card = rand(0, players[i].hands.length);
+      useChopsticks(i, card);
+    }
+    
     // Get selected card
     if(i == 0) {
       var chosenCardIndex = cardIndex;
@@ -246,11 +345,8 @@ function chooseCard(cardIndex) {
     // Handle chopsticks card
     if(chosenCard == "chopsticks") {                // Store index of chopsticks card. Not length-1
       players[i].chopsticks.push(players[i].chosen.length); // cos it hasn't been pushed yet.
-    }
-    // Naive implementation: 66% chance of using chopsticks if player has it
-    if(i != 0 && players[i].chopsticks.length > 0 && rand(0, 3)) { 
-      var card = rand(0, players[i].hands.length);
-      useChopsticks(i, card);
+    } else if (i == 0 && chosenCard == "pudding") {
+      Session.set("puddingCount", Session.get("puddingCount")+1);
     }
     
     // Remove chosen card from deck
@@ -259,7 +355,9 @@ function chooseCard(cardIndex) {
     //console.log("Player " + i + " has chosen " + chosenCard + " (index: " + chosenCardIndex + ")");
   }
   
-  passCards();
+  if (players[0].hands.length > 0) {
+    passCards();
+  }  
 }
 
 // Pass on cards to next player, take cards from previous player
@@ -485,18 +583,12 @@ function calculateScore () {
     }    
   }
   
+  scores.clear();
+  for (var i = 0; i < players.length; i++) {
+    scores.push(players[i].score);
+  }
+  
   findWinner();
-  /* switch (round) {
-    case 1:
-      Session.set("round1Winners", findWinner());
-      break;
-    case 2:
-      Session.set("round2Winners", findWinner());
-      break;
-    case 3:
-      Session.set("round3Winners", findWinner());
-      break;
-  } */
 }
 
 // For calculating maki and pudding scores which may require splitting of points
@@ -532,13 +624,18 @@ function findWinner () {
   
   if(round == 3) {
     switch (maxScorePlayers.length) {
-      case 1: return maxScorePlayers[0];
+      case 1:
+        winners = maxScorePlayers;
+        break;
+      
       case 2:
         if (players[maxScorePlayers[0]].pudding > players[maxScorePlayers[1]].pudding) {
-          return maxScorePlayers[0];
+          winners = [maxScorePlayers[0]];
         } else {
-          return maxScorePlayers[1];
+          winners = [maxScorePlayers[1]];
         }
+        break;
+        
       default:
         var maxPudding = 0;
         var maxPuddingPlayers = [];      
@@ -554,32 +651,45 @@ function findWinner () {
         winners = maxPuddingPlayers;
     }
   } else {
-    Session.set("round", round+1);
     winners = maxScorePlayers;
   }
   
   getWinnersName(winners);
 }
 
-function getWinnersName(winners) {
-  console.log(winners);
+function getWinnersName(winners) {  
+  // Get winner names
+  var winnerNames = "";
   switch (winners.length) {
     case 0:
-      Session.set("round1Winners", false);
+      winnerNames = false;
       break;
     case 1:
-      Session.set("round1Winners", playerNames[winners[0]]);
+      winnerNames = playerNames[winners[0]];
       break;
     default:
-      var names;
       for(var i = 0; i < winners.length; i++) {
         if(i != 0) {
-          names += ", ";
+          winnerNames += ", ";
         }
-        names += playerNames[winners[i]];
+        winnerNames += playerNames[winners[i]];
       }
-      Session.set("round1Winners", names);
-  }  
+  }
+  
+  // Get round number
+  var roundWinners;
+  switch (Session.get("round")) {
+    case 1:
+      roundWinners = "round1Winners";
+      break;
+    case 2:
+      roundWinners = "round2Winners";
+      break;
+    case 3:
+      roundWinners = "round3Winners";
+      break;
+  }
+  Session.set(roundWinners, winnerNames);
 }
 
 
@@ -590,5 +700,26 @@ function getWinnersName(winners) {
 // Returns a random integer between min (included) and max (excluded)
 function rand (min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
+}
+
+// Countdown timer
+function timer () {
+  if(players.length > 0) {
+    var count = Session.get("timer");
+    if (count > 0) {
+      count--;
+      Session.set("timer", count);
+    } else {
+      if (players[0].hands.length > 0) {
+        chooseCard(rand(0, players[0].hands.length));
+      }
+      
+      if (players[0].hands.length > 0) {      
+        Session.set("timer", 7);
+      } else {
+        Session.set("roundEnded", true);
+      }
+    }
+  }  
 }
 
